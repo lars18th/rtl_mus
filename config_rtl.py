@@ -71,10 +71,13 @@ dsp_chunk_size=1024		# use values like '16348','1024','16384'. It's the size of 
 dsp_sampling_rate=250000	# when using the fake dongle it's required to resynch
 dsp_resynch_loop=1		# number of reads when resynching using the fake dongle
 '''
-Example of fake dongle mode: reading samples from a FIFO file
+Example of fake dongle mode: reading samples from a FIFO file for IQ samples
 
 # Read from fifo "/raw-fifo" in chunks of 16384 bytes
 dsp_command="dd if=/raw-fifo bs=16384 status=noxfer"
+
+# This is the correct value for IQ samples at 2048000 sample rate
+dsp_chunk_size=16384
 
 # Set the sampling rate for regular 2048000 Msps
 dsp_sampling_rate=2048000
