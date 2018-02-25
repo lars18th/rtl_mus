@@ -30,17 +30,17 @@ dongle_id=""
 rtl_tcp_host = 'localhost'
 rtl_tcp_port = 1234
 
-setuid_on_start = 0						# we normally start with root privileges and setuid() to another user
-uid = 999 									# determine by issuing: $ id -u username
-ignore_clients_without_commands = 1 # we won't serve data to telnet sessions and things like that
-												# we'll start to serve data after getting the first valid command 
+setuid_on_start = 0	# we normally start with root privileges and setuid() to another user
+uid = 999		# determine by issuing: $ id -u username
+ignore_clients_without_commands = 1	# we won't serve data to telnet sessions and things like that
+					# we'll start to serve data after getting the first valid command 
 freq_allowed_ranges = [[0000000,2200000000]]
 # Allow from all: freq_allowed_ranges = [[24000000,2200000000]]
 
 client_cant_set_until=0		
 first_client_can_set=True	#openwebrx - spectrum thread will set things on start # no good, clients set parameters and things
-buffer_size=25000000	# per client
-log_file_path = "/dev/null" # Might be set to /dev/null to turn off logging
+buffer_size=25000000		# per client
+log_file_path = "/dev/null"	# Might be set to /dev/null to turn off logging
 '''
 Allow any host to connect:
 	use_ip_access_control=0
@@ -63,8 +63,8 @@ denied_ip_ranges=()
 allowed_ip_ranges=()
 allow_gain_set=1
 
-use_dsp_command=False # you can process raw I/Q data with a custom command that starts a process that we can pipe the data into, and also pipe out of.
-debug_dsp_command=False # show sample rate before and after the dsp command
+use_dsp_command=False	# you can process raw I/Q data with a custom command that starts a process that we can pipe the data into, and also pipe out of.
+debug_dsp_command=False	# show sample rate before and after the dsp command
 dsp_command=""
 
 '''
