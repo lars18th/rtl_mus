@@ -464,7 +464,7 @@ def main():
 	log.info("Server is UP")
 	
 	server_missing_logged=0	# Not to flood the screen with messages related to rtl_tcp disconnect
-	rtl_dongle_identifier='' # rtl_tcp sends some identifier on dongle type and gain values in the first few bytes right after connection
+	rtl_dongle_identifier=cfg.dongle_id # rtl_tcp sends some identifier on dongle type and gain values in the first few bytes right after connection. When !='' then use a fake value
 	clients=[]
 	dsp_data_count=original_data_count=0
 	commands=multiprocessing.Queue()
