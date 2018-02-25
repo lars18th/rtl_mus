@@ -41,6 +41,12 @@ import multiprocessing
 import code
 import traceback
 
+try:
+	# Use monotonic clock if available
+	time_func = time.monotonic
+except AttributeError:
+	time_func = time.time
+
 def ip_match(this,ip_ranges,for_allow):
 	if not len(ip_ranges):
 		return 1 #empty list matches all ip addresses
@@ -92,9 +98,30 @@ def add_data_to_clients(new_data):
 def dsp_read_thread():
 	global proc
 	global dsp_data_count
+	global fake_server
+	global read_size_dsp
+	global read_rate_dsp
+	global loop_resynch_dsp
+	loop_time=1.0 / ((read_rate_dsp * 2.0) / (read_size_dsp * loop_resynch_dsp))
+	print("DSP | Resynch very " + str(loop_time) + " seconds")
+	count_loop=0
+	last_time=time_func()	#time.monotonic()
 	while True:
 		try:
-			my_buffer=proc.stdout.read(1024)
+			if fake_server and (count_loop >= loop_resynch_dsp):
+				count_loop=0
+				now_time=time_func() #time.monotonic()
+				delta=now_time - last_time
+				sleep=loop_time - delta
+				if (sleep > 0.0):
+					time.sleep(sleep)
+				else:
+					# print("DSP | last_time="+str(last_time) + " now_time="+str(now_time) + " delta="+str(delta)+" sleep="+str(sleep) )
+					print("DSP | Trouble: Read from DSP process slow!")
+				last_time=time_func() #time.monotonic()
+			my_buffer=proc.stdout.read(read_size_dsp)
+			if fake_server:
+				count_loop+=1
 		except IOError:
 			log.error("DSP subprocess is not ready for reading.")
 			time.sleep(1)
@@ -107,13 +134,15 @@ def dsp_write_thread():
 	global proc
 	global dsp_input_queue
 	global original_data_count
+	global fake_server
 	while True:
 		try:
 			my_buffer=dsp_input_queue.get(timeout=0.3)
 		except:
 			continue
-		proc.stdin.write(my_buffer)
-		proc.stdin.flush()
+		if not fake_server:
+			proc.stdin.write(my_buffer)
+			proc.stdin.flush()
 		if cfg.debug_dsp_command:
 			original_data_count+=len(my_buffer)
 
@@ -216,17 +245,19 @@ def rtl_tcp_asyncore_reset(timeout):
 class rtl_tcp_asyncore(asyncore.dispatcher):
 	def __init__(self):
 		global server_missing_logged
+		global fake_server
 		asyncore.dispatcher.__init__(self)
 		self.ok=True
-		self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-		try:		
-			self.connect((cfg.rtl_tcp_host, cfg.rtl_tcp_port))
-			self.socket.settimeout(0.1)
-		except:
-			log.error("rtl_tcp connection refused. Retrying.")
-			thread.start_new_thread(rtl_tcp_asyncore_reset, (1,))
-			self.close()
-			return
+		if not fake_server:
+			self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+			try:		
+				self.connect((cfg.rtl_tcp_host, cfg.rtl_tcp_port))
+				self.socket.settimeout(0.1)
+			except:
+				log.error("rtl_tcp connection refused. Retrying.")
+				thread.start_new_thread(rtl_tcp_asyncore_reset, (1,))
+				self.close()
+				return
 
 	def handle_error(self):
 		global server_missing_logged
@@ -290,7 +321,8 @@ class rtl_tcp_asyncore(asyncore.dispatcher):
 		global commands
 		while not commands.empty():
 			mcmd=commands.get()
-			self.send(mcmd)
+			if not fake_server:
+				self.send(mcmd)
 
 def xxd(data):
 	#diagnostic purposes only
@@ -448,6 +480,10 @@ def main():
 	global max_client_id
 	global rtl_tcp_core
 	global sample_rate
+	global fake_server
+	global read_size_dsp
+	global read_rate_dsp
+	global loop_resynch_dsp
 
 	# set up logging
 	log = logging.getLogger("rtl_mus")
@@ -465,6 +501,7 @@ def main():
 	
 	server_missing_logged=0	# Not to flood the screen with messages related to rtl_tcp disconnect
 	rtl_dongle_identifier=cfg.dongle_id # rtl_tcp sends some identifier on dongle type and gain values in the first few bytes right after connection. When !='' then use a fake value
+	fake_server=False
 	clients=[]
 	dsp_data_count=original_data_count=0
 	commands=multiprocessing.Queue()
@@ -472,6 +509,14 @@ def main():
 	clients_mutex=multiprocessing.Lock()
 	max_client_id=0
 	sample_rate=250000 # so far only watchdog thread uses it to fill buffer up with zeros on missing input
+
+	read_size_dsp=cfg.dsp_chunk_size
+	loop_resynch_dsp=cfg.dsp_resynch_loop
+	read_rate_dsp=0
+	if (cfg.rtl_tcp_port == 0):
+		print "Running without real server (FAKE SERVER!)"
+		fake_server=True
+		read_rate_dsp=cfg.dsp_sampling_rate
 
 	# start dsp threads
 	if cfg.use_dsp_command:
