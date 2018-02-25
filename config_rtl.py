@@ -22,6 +22,11 @@ my_listening_port = 7373
 
 #send_first=chr(9)+chr(0)+chr(0)+chr(0)+chr(1) # set direct sampling
 send_first=""
+#dongle_id = ( chr(0x52) + chr(0x54) + chr(0x4c) + chr(0x30)
+#            + chr(0x00) + chr(0x00) + chr(0x00) + chr(0x02)
+#            + chr(0x00) + chr(0x00) + chr(0x00) + chr(0x05)
+#            ) # if you like to rewrite the DONGLE-ID. Required when using fake dongle.
+dongle_id=""
 rtl_tcp_host = 'localhost'
 rtl_tcp_port = 1234
 
